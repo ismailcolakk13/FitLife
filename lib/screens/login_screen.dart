@@ -1,0 +1,105 @@
+import 'package:flutter/material.dart';
+import 'signup_screen.dart';
+import 'home_screen.dart';
+
+class LoginScreen extends StatefulWidget {
+  static const routeName = '/login';
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passCtrl.dispose();
+    super.dispose();
+  }
+
+  void _login() {
+    if (_formKey.currentState?.validate() ?? false) {
+      // For demo purposes we just go to Home
+      Navigator.pushReplacementNamed(context, HomeScreen.routeName);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.primary;
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+            child: Column(
+              children: [
+                Text('FitLife', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Colors.grey[900])),
+                const SizedBox(height: 8),
+                Text('Günlük aktivitelerini kolayca takip et.', textAlign: TextAlign.center, style: const TextStyle(color: Colors.black54)),
+                const SizedBox(height: 20),
+                Card(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 8,
+                  child: Padding(
+                    padding: const EdgeInsets.all(18.0),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _emailCtrl,
+                            decoration: InputDecoration(labelText: 'E-posta', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+                            validator: (v) => (v == null || v.isEmpty) ? 'E-posta girin' : null,
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _passCtrl,
+                            obscureText: true,
+                            decoration: InputDecoration(labelText: 'Şifre', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+                            validator: (v) => (v == null || v.isEmpty) ? 'Şifre girin' : null,
+                          ),
+                          const SizedBox(height: 18),
+                          ElevatedButton(
+                            onPressed: _login,
+                            style: ButtonStyle(
+                              backgroundColor: WidgetStatePropertyAll(color),
+                              foregroundColor: const WidgetStatePropertyAll(Colors.white),
+                              shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                              minimumSize: const WidgetStatePropertyAll(Size.fromHeight(50)),
+                              elevation: const WidgetStatePropertyAll(2),
+                            ),
+                            child: const Text('GİRİŞ YAP', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                          const SizedBox(height: 8),
+                          TextButton(onPressed: () {}, child: Text('Şifremi unuttum', style: TextStyle(color: color))),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text('Hesabın yok mu?'),
+                              TextButton(
+                                onPressed: () => Navigator.pushNamed(context, SignupScreen.routeName),
+                                child: Text('Kayıt ol', style: TextStyle(color: color, fontWeight: FontWeight.w700)),
+                              )
+                            ],
+                          )
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
