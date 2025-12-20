@@ -4,7 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 class WaterScreen extends StatefulWidget {
   static const routeName = '/water';
   final VoidCallback? onBack;
-  
+
   const WaterScreen({super.key, this.onBack});
 
   @override
@@ -45,48 +45,18 @@ class _WaterScreenState extends State<WaterScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  GestureDetector(
-                    onTap: widget.onBack,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 10,
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back,
-                        color: Colors.black87,
-                        size: 24,
-                      ),
+                  const Icon(Icons.water_drop, color: Colors.blue, size: 28),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Su Takibi',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[900],
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.water_drop,
-                        color: Colors.blue,
-                        size: 28,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Su Takibi',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[900],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 40),
                 ],
               ),
               const SizedBox(height: 24),

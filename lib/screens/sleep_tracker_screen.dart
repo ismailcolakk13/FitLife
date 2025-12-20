@@ -5,7 +5,7 @@ import 'package:health/health.dart';
 class SleepTrackerScreen extends StatefulWidget {
   static const routeName = '/sleep-tracker';
   final VoidCallback? onBack;
-  
+
   const SleepTrackerScreen({super.key, this.onBack});
 
   @override
@@ -30,33 +30,37 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
     try {
       // Varsayılan verilerle başla - timeout olursa bunları kullan
       List<double> weekData = [7.2, 6.8, 8.1, 7.5, 6.9, 7.8, 7.0];
-      
+
       try {
         final now = DateTime.now();
         final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-        
+
         // Timeout ile tüm veri çekme işlemini sarıp al
-        await Future.delayed(const Duration(milliseconds: 100)); // Permissionlar için zaman ver
-        
+        await Future.delayed(
+          const Duration(milliseconds: 100),
+        ); // Permissionlar için zaman ver
+
         // Geçen 7 günün uyku verilerini al (timeout ile)
         for (int i = 0; i < 7; i++) {
           try {
             final dayStart = startOfWeek.add(Duration(days: i));
             final dayEnd = dayStart.add(const Duration(days: 1));
-            
-            final sleepPoints = await health.getHealthDataFromTypes(
-              startTime: dayStart,
-              endTime: dayEnd,
-              types: [HealthDataType.SLEEP_IN_BED],
-            ).timeout(const Duration(seconds: 2));
-            
+
+            final sleepPoints = await health
+                .getHealthDataFromTypes(
+                  startTime: dayStart,
+                  endTime: dayEnd,
+                  types: [HealthDataType.SLEEP_IN_BED],
+                )
+                .timeout(const Duration(seconds: 2));
+
             double dayMinutes = 0;
             for (var point in sleepPoints) {
               if (point.value is NumericHealthValue) {
                 dayMinutes += (point.value as NumericHealthValue) as double;
               }
             }
-            
+
             if (dayMinutes > 0) {
               weekData[i] = dayMinutes / 60;
             }
@@ -69,7 +73,7 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
         print('Genel veri çekme hatası: $e');
         // Varsayılan verilerle devam et
       }
-      
+
       if (mounted) {
         setState(() {
           sleepData = weekData;
@@ -177,29 +181,17 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
               children: [
                 // Üst kısım: Geri butonu + Başlık
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    GestureDetector(
-                      onTap: widget.onBack,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 10)],
-                        ),
-                        child: const Icon(Icons.arrow_back, color: Colors.black87, size: 24),
-                      ),
-                    ),
+                    const Icon(Icons.bedtime, color: Colors.purple, size: 28),
                     const SizedBox(width: 12),
-                    Row(
-                      children: [
-                        const Icon(Icons.bedtime, color: Colors.purple, size: 28),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Uyku Takibi',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.grey[900]),
-                        ),
-                      ],
+                    Text(
+                      'Uyku Takibi',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[900],
+                      ),
                     ),
                   ],
                 ),
@@ -210,12 +202,21 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Color.fromRGBO(156, 39, 176, 1), Color.fromRGBO(142, 36, 170, 1)],
+                      colors: [
+                        Color.fromRGBO(156, 39, 176, 1),
+                        Color.fromRGBO(142, 36, 170, 1),
+                      ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(20),
-                    boxShadow: [BoxShadow(color: Color.fromRGBO(156, 39, 176, 0.25), blurRadius: 15, offset: const Offset(0, 8))],
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color.fromRGBO(156, 39, 176, 0.25),
+                        blurRadius: 15,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
                   child: Column(
                     children: [
@@ -225,9 +226,20 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Dün Gece', style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white)),
+                              Text(
+                                'Dün Gece',
+                                style: Theme.of(context).textTheme.bodyLarge
+                                    ?.copyWith(color: Colors.white),
+                              ),
                               const SizedBox(height: 8),
-                              Text('${todaySleep.toStringAsFixed(1)} saat', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
+                              Text(
+                                '${todaySleep.toStringAsFixed(1)} saat',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ],
                           ),
                           Container(
@@ -236,7 +248,11 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                               color: Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(Icons.bedtime, color: Colors.white, size: 32),
+                            child: const Icon(
+                              Icons.bedtime,
+                              color: Colors.white,
+                              size: 32,
+                            ),
                           ),
                         ],
                       ),
@@ -244,13 +260,25 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _SleepStat(label: 'Hedef', value: '${goal.toStringAsFixed(1)} sa', color: Colors.white),
+                          _SleepStat(
+                            label: 'Hedef',
+                            value: '${goal.toStringAsFixed(1)} sa',
+                            color: Colors.white,
+                          ),
                           _SleepStat(
                             label: 'Fark',
-                            value: todaySleep >= goal ? '+${(todaySleep - goal).toStringAsFixed(1)} sa' : '-${(goal - todaySleep).toStringAsFixed(1)} sa',
-                            color: todaySleep >= goal ? Colors.greenAccent : Colors.redAccent,
+                            value: todaySleep >= goal
+                                ? '+${(todaySleep - goal).toStringAsFixed(1)} sa'
+                                : '-${(goal - todaySleep).toStringAsFixed(1)} sa',
+                            color: todaySleep >= goal
+                                ? Colors.greenAccent
+                                : Colors.redAccent,
                           ),
-                          _SleepStat(label: 'Kalite', value: 'İyi', color: Colors.white),
+                          _SleepStat(
+                            label: 'Kalite',
+                            value: 'İyi',
+                            color: Colors.white,
+                          ),
                         ],
                       ),
                     ],
@@ -262,11 +290,18 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Haftalık Uyku Süresi', style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      'Haftalık Uyku Süresi',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     if (!hasHealthData)
                       Text(
                         'Çubuğa tıkla →',
-                        style: TextStyle(fontSize: 12, color: Colors.purple, fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.purple,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                   ],
                 ),
@@ -274,12 +309,19 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
 
                 // Uyku grafiği
                 Container(
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 20,
+                    horizontal: 16,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 15, offset: const Offset(0, 6)),
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 15,
+                        offset: const Offset(0, 6),
+                      ),
                     ],
                   ),
                   child: SizedBox(
@@ -305,7 +347,8 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                           handleBuiltInTouches: true,
                           touchCallback: (event, response) {
                             if (response?.spot != null) {
-                              final barIndex = response!.spot!.touchedBarGroupIndex;
+                              final barIndex =
+                                  response!.spot!.touchedBarGroupIndex;
                               if (!hasHealthData) {
                                 _showManualSleepDialog(barIndex);
                               }
@@ -329,7 +372,9 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                             barRods: [
                               BarChartRodData(
                                 toY: sleepData[i],
-                                color: i == todayIndex ? Colors.purple[500] : Colors.purple[300],
+                                color: i == todayIndex
+                                    ? Colors.purple[500]
+                                    : Colors.purple[300],
                                 width: 20,
                                 borderRadius: BorderRadius.circular(6),
                               ),
@@ -337,15 +382,33 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                           ),
                         ),
                         titlesData: FlTitlesData(
-                          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
                           bottomTitles: AxisTitles(
                             sideTitles: SideTitles(
                               showTitles: true,
                               getTitlesWidget: (value, meta) {
-                                const days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+                                const days = [
+                                  'Pzt',
+                                  'Sal',
+                                  'Çar',
+                                  'Per',
+                                  'Cum',
+                                  'Cmt',
+                                  'Paz',
+                                ];
                                 final index = value.toInt();
-                                return Text(days[index], style: const TextStyle(fontSize: 12, color: Colors.grey));
+                                return Text(
+                                  days[index],
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                );
                               },
                             ),
                           ),
@@ -353,7 +416,13 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                             sideTitles: SideTitles(
                               showTitles: true,
                               getTitlesWidget: (value, meta) {
-                                return Text('${value.toStringAsFixed(0)}h', style: const TextStyle(fontSize: 10, color: Colors.grey));
+                                return Text(
+                                  '${value.toStringAsFixed(0)}h',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey,
+                                  ),
+                                );
                               },
                               interval: 2,
                               reservedSize: 40,
@@ -367,7 +436,10 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                 const SizedBox(height: 24),
 
                 // Uyku aşamaları
-                Text('Uyku Aşamaları', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Uyku Aşamaları',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -375,31 +447,67 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 15, offset: const Offset(0, 6)),
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 15,
+                        offset: const Offset(0, 6),
+                      ),
                     ],
                   ),
                   child: Column(
                     children: [
-                      _SleepPhase(label: 'Hafif Uyku', duration: '2h 15m', percentage: 32, color: Colors.blue),
+                      _SleepPhase(
+                        label: 'Hafif Uyku',
+                        duration: '2h 15m',
+                        percentage: 32,
+                        color: Colors.blue,
+                      ),
                       const Divider(height: 20),
-                      _SleepPhase(label: 'Derin Uyku', duration: '1h 45m', percentage: 25, color: Colors.purple),
+                      _SleepPhase(
+                        label: 'Derin Uyku',
+                        duration: '1h 45m',
+                        percentage: 25,
+                        color: Colors.purple,
+                      ),
                       const Divider(height: 20),
-                      _SleepPhase(label: 'REM Uyku', duration: '1h 30m', percentage: 21, color: Colors.orange),
+                      _SleepPhase(
+                        label: 'REM Uyku',
+                        duration: '1h 30m',
+                        percentage: 21,
+                        color: Colors.orange,
+                      ),
                       const Divider(height: 20),
-                      _SleepPhase(label: 'Uykusuzluk', duration: '1h 30m', percentage: 22, color: Colors.grey),
+                      _SleepPhase(
+                        label: 'Uykusuzluk',
+                        duration: '1h 30m',
+                        percentage: 22,
+                        color: Colors.grey,
+                      ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 24),
 
                 // İpuçları
-                Text('Uyku İyileştirme İpuçları', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Uyku İyileştirme İpuçları',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: 12),
-                _TipCard(title: '🛏️ Düzenli Uyku Saati', description: 'Her gün aynı saatte yatıp kalkmaya çalışın'),
+                _TipCard(
+                  title: '🛏️ Düzenli Uyku Saati',
+                  description: 'Her gün aynı saatte yatıp kalkmaya çalışın',
+                ),
                 const SizedBox(height: 8),
-                _TipCard(title: '📵 Ekran Kalması', description: 'Yatışından 30 dakika önce telefon kullanmayın'),
+                _TipCard(
+                  title: '📵 Ekran Kalması',
+                  description: 'Yatışından 30 dakika önce telefon kullanmayın',
+                ),
                 const SizedBox(height: 8),
-                _TipCard(title: '🌡️ Oda Sıcaklığı', description: 'Uyumak için ideal sıcaklık 16-19°C'),
+                _TipCard(
+                  title: '🌡️ Oda Sıcaklığı',
+                  description: 'Uyumak için ideal sıcaklık 16-19°C',
+                ),
                 const SizedBox(height: 24),
               ],
             ),
@@ -425,9 +533,19 @@ class _SleepStat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(label, style: TextStyle(fontSize: 12, color: color.withOpacity(0.8))),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: color.withOpacity(0.8)),
+        ),
         const SizedBox(height: 4),
-        Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: color)),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
       ],
     );
   }
@@ -458,13 +576,25 @@ class _SleepPhase extends StatelessWidget {
                 Container(
                   width: 12,
                   height: 12,
-                  decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3)),
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
                 ),
                 const SizedBox(width: 8),
-                Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
-            Text(duration, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            Text(
+              duration,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -480,7 +610,10 @@ class _SleepPhase extends StatelessWidget {
         const SizedBox(height: 4),
         Align(
           alignment: Alignment.centerRight,
-          child: Text('%$percentage', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+          child: Text(
+            '%$percentage',
+            style: const TextStyle(fontSize: 10, color: Colors.grey),
+          ),
         ),
       ],
     );
@@ -491,10 +624,7 @@ class _TipCard extends StatelessWidget {
   final String title;
   final String description;
 
-  const _TipCard({
-    required this.title,
-    required this.description,
-  });
+  const _TipCard({required this.title, required this.description});
 
   @override
   Widget build(BuildContext context) {
@@ -508,9 +638,19 @@ class _TipCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87)),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(description, style: TextStyle(fontSize: 12, color: Colors.grey[700])),
+          Text(
+            description,
+            style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+          ),
         ],
       ),
     );

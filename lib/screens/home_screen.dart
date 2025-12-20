@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'calorie_camera_screen.dart';
 import 'package:health/health.dart';
 import 'activity_detail_screen.dart';
 import 'sleep_tracker_screen.dart';
@@ -22,10 +23,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   late final List<Widget> _screens = [
     _buildDashboard(context),
-    SleepTrackerScreen(onBack: () => setState(() => _selectedIndex = 0)),
-    ActivityDetailScreen(onBack: () => setState(() => _selectedIndex = 0)),
-    WaterScreen(onBack: () => setState(() => _selectedIndex = 0)),
-    ProfileScreen(onBack: () => setState(() => _selectedIndex = 0)),
+    SleepTrackerScreen(),
+    ActivityDetailScreen(),
+    WaterScreen(),
+    FoodAnalysisScreen(),
+    ProfileScreen()
   ];
 
   @override
@@ -193,7 +195,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           icon: Icons.water_drop,
                           color: Colors.blue,
                           onTap: () {
-                            Navigator.pushNamed(context, '/water');
+                            setState(() {
+                              _selectedIndex = 3;
+                            });
                           },
                         ),
                         _StatCard(
@@ -325,10 +329,15 @@ class _HomeScreenState extends State<HomeScreen> {
               label: 'Su',
             ),
             BottomNavigationBarItem(
+              icon: Icon(Icons.food_bank_outlined),
+              activeIcon: Icon(Icons.food_bank),
+              label: 'Yemek',
+            ),
+            BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),
               activeIcon: Icon(Icons.person),
               label: 'Profil',
-            ),
+            )
           ],
         ),
       ),
