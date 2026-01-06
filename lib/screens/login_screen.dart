@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'signup_screen.dart';
 import 'home_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'Services/auth.dart';
+import 'Services/firebase_database.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginScreen extends StatefulWidget {
   static const routeName = '/login';
@@ -15,6 +19,120 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
 
+  final _auth = AuthService();
+
+  bool loading = false;
+  bool hidePassword = true;
+
+  // ---------- Layer 1: Local Validation ----------
+
+  String? validateEmail(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return "Email is required";
+    }
+
+    final regex =
+    RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+
+    if (!regex.hasMatch(value.trim())) {
+      return "Enter a valid email address";
+    }
+
+    return null;
+  }
+
+  String? validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return "Password is required";
+    }
+
+    if (value.length < 6) {
+      return "Password must be at least 6 characters";
+    }
+
+    return null;
+  }
+
+  // ---------- Submit (Layer 1 + Layer 2) ----------
+
+  Future<void> submit() async {
+    FocusScope.of(context).unfocus();
+
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => loading = true);
+
+    try {
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailCtrl.text.trim(),
+        password: _passCtrl.text.trim(),
+      );
+      final user = credential.user;
+      if (user != null && !user.emailVerified) {
+        await FirebaseAuth.instance.signOut();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'E-postanızı doğrulamadan giriş yapamazsınız',
+            ),
+          ),
+        );
+      }
+      else
+      {
+        /*
+        final uid = FirebaseAuth.instance.currentUser!.uid;
+
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .get();
+
+        if (doc.exists) {
+          // ✅ Kullanıcının datası var
+        } else {
+          // ❌ Henüz kayıtlı değil
+        }
+        */
+        Navigator.pushReplacementNamed(context, HomeScreen.routeName);
+      }
+    } on FirebaseAuthException catch (e) {
+      final message = switch (e.code) {
+        'user-not-found' ||
+        'wrong-password' ||
+        'invalid-credential' ||
+        'invalid_login_credentials' =>
+        'E-posta veya şifre hatalı',
+
+        'email-already-in-use' =>
+        'Bu e-posta zaten kayıtlı',
+
+        'invalid-email' =>
+        'Geçersiz e-posta formatı',
+
+        'weak-password' =>
+        'Şifre çok zayıf',
+
+        'too-many-requests' =>
+        'Çok fazla deneme yapıldı. Lütfen bekleyin.',
+
+        _ =>
+        'Giriş başarısız. Lütfen tekrar deneyin.'
+      };
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Beklenmeyen bir hata oluştu!")),
+      );
+    }
+
+    setState(() => loading = false);
+  }
+
+
   @override
   void dispose() {
     _emailCtrl.dispose();
@@ -25,8 +143,12 @@ class _LoginScreenState extends State<LoginScreen> {
   void _login() {
     if (_formKey.currentState?.validate() ?? false) {
       // For demo purposes we just go to Home
-      Navigator.pushReplacementNamed(context, HomeScreen.routeName);
+      submit();
     }
+  }
+
+  void _loginGuest() {
+      Navigator.pushReplacementNamed(context, HomeScreen.routeName);
   }
 
   @override
@@ -51,19 +173,20 @@ class _LoginScreenState extends State<LoginScreen> {
                     padding: const EdgeInsets.all(18.0),
                     child: Form(
                       key: _formKey,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
                       child: Column(
                         children: [
                           TextFormField(
                             controller: _emailCtrl,
                             decoration: InputDecoration(labelText: 'E-posta', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
-                            validator: (v) => (v == null || v.isEmpty) ? 'E-posta girin' : null,
+                            validator: validateEmail
                           ),
                           const SizedBox(height: 12),
                           TextFormField(
                             controller: _passCtrl,
                             obscureText: true,
                             decoration: InputDecoration(labelText: 'Şifre', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
-                            validator: (v) => (v == null || v.isEmpty) ? 'Şifre girin' : null,
+                            validator: validatePassword
                           ),
                           const SizedBox(height: 18),
                           ElevatedButton(
@@ -77,19 +200,37 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             child: const Text('GİRİŞ YAP', style: TextStyle(fontWeight: FontWeight.bold)),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 1),
                           TextButton(onPressed: () {}, child: Text('Şifremi unuttum', style: TextStyle(color: color))),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 1),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               const Text('Hesabın yok mu?'),
                               TextButton(
-                                onPressed: () => Navigator.pushNamed(context, SignupScreen.routeName),
+                                onPressed: () async {
+                                  final result = await Navigator.pushNamed(
+                                    context,
+                                    SignupScreen.routeName,
+                                  );
+
+                                  if (result == 'verify') {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Doğrulama maili gönderildi. Lütfen e-postanızı kontrol edin.'),
+                                      ),
+                                    );
+                                  }
+                                },
                                 child: Text('Kayıt ol', style: TextStyle(color: color, fontWeight: FontWeight.w700)),
                               )
                             ],
-                          )
+                          ),
+                          const SizedBox(height: 1),
+                          TextButton(
+                              onPressed: _loginGuest,
+                              child: Text('Misafir olarak devam et', style: TextStyle(color: color))
+                          ),
                         ],
                       ),
                     ),
