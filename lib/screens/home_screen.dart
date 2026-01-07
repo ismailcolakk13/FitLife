@@ -26,7 +26,12 @@ class HomeScreen extends StatelessWidget {
                       Text('8 Kasım 2025, Cumartesi', style: TextStyle(color: Colors.grey[600])),
                     ],
                   ),
-                  CircleAvatar(backgroundColor: Colors.green[50], child: Icon(Icons.person, color: color)),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).pushNamed('/profile');
+                    },
+                    child: CircleAvatar(backgroundColor: Colors.green[50], child: Icon(Icons.person, color: color)),
+                  ),
                 ],
               ),
               const SizedBox(height: 18),
