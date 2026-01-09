@@ -8,6 +8,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'screens/activity_detail_screen.dart';
 import 'screens/sleep_tracker_screen.dart';
 import 'screens/profile_screen.dart';
+import 'services/session_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +18,14 @@ void main() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
+  Future<Widget> _getStartScreen() async {
+    final userId = await SessionManager.getUserId();
+    if (userId != null) {
+      return const HomeScreen();
+    }
+    return const OnboardingScreen();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,9 +44,18 @@ class MyApp extends StatelessWidget {
           bodySmall: TextStyle(fontFamily: "Roboto"),
         ),
       ),
-      initialRoute: OnboardingScreen.routeName,
+      home: FutureBuilder<Widget>(
+        future: _getStartScreen(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          return snapshot.data!;
+        },
+      ),
       routes: {
-        OnboardingScreen.routeName: (_) => const OnboardingScreen(),
         LoginScreen.routeName: (_) => const LoginScreen(),
         SignupScreen.routeName: (_) => const SignupScreen(),
         HomeScreen.routeName: (_) => const HomeScreen(),

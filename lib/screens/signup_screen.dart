@@ -14,6 +14,8 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _firstName = TextEditingController();
+  final _lastName = TextEditingController();
   final _email = TextEditingController();
   final _pass = TextEditingController();
   final _auth = AuthService();
@@ -71,7 +73,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
       if (user != null && !user.emailVerified) {
         final user_id = FirebaseAuth.instance.currentUser!.uid;
-        await FirebaseDatabaseService(uid: user_id).updateUserData("FitBuddy", 18, true);
+        await FirebaseDatabaseService(uid: user_id).updateUserData(_firstName.text, 18, true);
         await user.sendEmailVerification();
         Navigator.pop(context, "verify");
       }
@@ -121,8 +123,14 @@ class _SignupScreenState extends State<SignupScreen> {
 
 
 
+  final AuthService _authService = AuthService();
+  bool _isLoading = false;
+  String? _error;
+
   @override
   void dispose() {
+    _firstName.dispose();
+    _lastName.dispose();
     _email.dispose();
     _pass.dispose();
     super.dispose();
@@ -132,6 +140,8 @@ class _SignupScreenState extends State<SignupScreen> {
     if (_formKey.currentState?.validate() ?? false) {
       submit();
     }
+
+    Navigator.pushReplacementNamed(context, HomeScreen.routeName);
   }
 
   @override
@@ -154,19 +164,65 @@ class _SignupScreenState extends State<SignupScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextFormField(decoration: InputDecoration(labelText: 'E-posta', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))), controller: _email, validator: validateEmail),
+                    TextFormField(
+                      controller: _firstName,
+                      decoration: InputDecoration(
+                        labelText: 'Ad',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Ad girin' : null,
+                    ),
                     const SizedBox(height: 12),
-                    TextFormField(decoration: InputDecoration(labelText: 'Şifre', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))), controller: _pass, obscureText: true, validator: validatePassword),
-                    const SizedBox(height: 18),
+                    TextFormField(
+                      controller: _lastName,
+                      decoration: InputDecoration(
+                        labelText: 'Soyad',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Soyad girin' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _email,
+                      decoration: InputDecoration(
+                        labelText: 'E-posta',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      validator: validateEmail
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _pass,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: 'Şifre',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      validator: validatePassword
+                    ),
+                    const SizedBox(height: 12),
+
+                    if (_error != null) ...[
+                      Text(_error!, style: const TextStyle(color: Colors.red)),
+                      const SizedBox(height: 10),
+                    ],
+
+                    const SizedBox(height: 6),
                     ElevatedButton(
-                      onPressed: signUp,
+                      onPressed: _isLoading ? null : submit,
                       style: ButtonStyle(
                         backgroundColor: WidgetStatePropertyAll(color),
                         foregroundColor: const WidgetStatePropertyAll(Colors.white),
                         minimumSize: const WidgetStatePropertyAll(Size.fromHeight(48)),
-                        shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                        shape: WidgetStatePropertyAll(
+                          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
                       ),
-                      child: const Text('Kayıt ol'),
+                      child: _isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text('Kayıt ol'),
                     )
                   ],
                 ),
