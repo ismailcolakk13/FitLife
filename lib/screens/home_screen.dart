@@ -132,9 +132,20 @@ class _HomeScreenState extends State<HomeScreen> {
             Center(
               child: Column(
                 children: [
-                  Text('Günaydın, Ayşe ☀️', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.grey[900])),
-                  const SizedBox(height: 4),
-                  Text('8 Kasım 2025, Cumartesi', style: TextStyle(fontSize: 15, color: Colors.grey[600])),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Günaydın, Ayşe ☀️', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.grey[900])),
+                      const SizedBox(height: 4),
+                      Text('8 Kasım 2025, Cumartesi', style: TextStyle(color: Colors.grey[600])),
+                    ],
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).pushNamed('/profile');
+                    },
+                    child: CircleAvatar(backgroundColor: Colors.green[50], child: Icon(Icons.person, color: color)),
+                  ),
                 ],
               ),
             ),
