@@ -15,6 +15,7 @@ class User {
   final int? sleepGoalMinutes;
   final String? createdAt;
   final String? updatedAt;
+  //final int? streakCount;   EKLENMELİ DB NASIL BİLMİYORUM
 
   User({
     this.id,

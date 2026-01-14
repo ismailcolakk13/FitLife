@@ -1,11 +1,15 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_application_6/services/streak_service.dart';
 import 'calorie_camera_screen.dart';
 import 'package:health/health.dart';
 import 'activity_detail_screen.dart';
 import 'sleep_tracker_screen.dart';
 import 'profile_screen.dart';
 import 'water_screen.dart';
+import "dart:io";
 
 class HomeScreen extends StatefulWidget {
   static const routeName = '/home';
@@ -18,7 +22,9 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   int _stepCount = 0;
+  int _streakCount = 5;
   double _sleepHours = 7.5; // Varsayılan uyku saati
+  int _dailyCalorieGoal = 2000; //Firebaseden gelmeli
   final Health health = Health();
 
   late final List<Widget> _screens = [
@@ -27,21 +33,51 @@ class _HomeScreenState extends State<HomeScreen> {
     ActivityDetailScreen(),
     WaterScreen(),
     FoodAnalysisScreen(),
-    ProfileScreen()
+    ProfileScreen(),
   ];
 
   @override
   void initState() {
     super.initState();
     _requestPermissionsAndFetchData();
+    _checkStreak();
+    _fetchUserData();
   }
+
+  // Firebase'den günlük kalori hedefini çeken fonksiyon
+  Future<void> _fetchUserData() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    try {
+      DocumentSnapshot doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+      if (doc.exists && doc.data() != null) {
+        setState(() {
+          // 'dailyCalorieGoal' alanını int olarak alıyoruz
+          _dailyCalorieGoal = (doc.get('dailyCalorieGoal') as num).toInt();
+        });
+      }
+    } catch (e) {
+      print("Kullanıcı verisi çekme hatası: $e");
+    }
+  }
+
+  // Hangi uyku verisini kullanacağımızı dinamik belirliyoruz
+  HealthDataType get _sleepType => Platform.isAndroid
+      ? HealthDataType
+            .SLEEP_ASLEEP // Android için
+      : HealthDataType.SLEEP_IN_BED; // iOS için
 
   Future<void> _requestPermissionsAndFetchData() async {
     try {
+      // Platforma göre doğru listeyi oluşturuyoruz
       final types = [
         HealthDataType.STEPS,
         HealthDataType.ACTIVE_ENERGY_BURNED,
-        HealthDataType.SLEEP_IN_BED,
+        _sleepType, // <--- Dinamik tip burada kullanılıyor
       ];
 
       final permissions = [
@@ -50,13 +86,17 @@ class _HomeScreenState extends State<HomeScreen> {
         HealthDataAccess.READ,
       ];
 
-      bool requested = await health.requestAuthorization(types, permissions: permissions);
+      // İzin iste
+      bool requested = await health.requestAuthorization(
+        types,
+        permissions: permissions,
+      );
 
       if (requested) {
         await _fetchHealthData();
       }
     } catch (e) {
-      print('Hata: $e');
+      print('İzin Hatası: $e');
     }
   }
 
@@ -64,44 +104,46 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final now = DateTime.now();
       final startOfDay = DateTime(now.year, now.month, now.day);
+      final startOfYesterday = DateTime(now.year, now.month, now.day - 1);
 
-      // Adım verisi al
+      // Adım ve Kalori verilerini çek
       List<HealthDataPoint> stepsData = await health.getHealthDataFromTypes(
         startTime: startOfDay,
         endTime: now,
         types: [HealthDataType.STEPS],
       );
 
-      // Kalori verisi al
       List<HealthDataPoint> caloriesData = await health.getHealthDataFromTypes(
         startTime: startOfDay,
         endTime: now,
         types: [HealthDataType.ACTIVE_ENERGY_BURNED],
       );
 
-      // Uyku verisi al (dün gece)
-      final startOfYesterday = DateTime(now.year, now.month, now.day - 1);
+      // Uyku verisini platforma uygun tiple çek
       List<HealthDataPoint> sleepData = await health.getHealthDataFromTypes(
         startTime: startOfYesterday,
         endTime: startOfDay,
-        types: [HealthDataType.SLEEP_IN_BED],
+        types: [_sleepType], // <--- Burada da dinamik tipi kullanıyoruz
       );
 
+      // --- HESAPLAMA KISMI ---
       int totalSteps = 0;
       double totalSleepMinutes = 0;
 
+      // Güvenli dönüşüm (crash olmaması için)
       for (var data in stepsData) {
         if (data.value is NumericHealthValue) {
-          totalSteps += ((data.value as NumericHealthValue) as double).toInt();
+          totalSteps += (data.value as NumericHealthValue).numericValue.toInt();
         }
       }
 
-      // Uyku dakikalarını saat'e çevir
       for (var data in sleepData) {
         if (data.value is NumericHealthValue) {
-          totalSleepMinutes += (data.value as NumericHealthValue) as double;
+          totalSleepMinutes += (data.value as NumericHealthValue).numericValue
+              .toDouble();
         }
       }
+
       double sleepHours = totalSleepMinutes / 60;
 
       setState(() {
@@ -112,11 +154,38 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     } catch (e) {
       print('Veri çekme hatası: $e');
-      // Varsayılan değerleri kullan
+      // Hata durumunda varsayılan değerler
       setState(() {
-        _stepCount = 7236;
-        _sleepHours = 7.5;
+        _stepCount = 0;
+        _sleepHours = 0.0;
       });
+    }
+  }
+
+  StreakService _streakService = StreakService();
+  Future<void> _checkStreak() async {
+    try {
+      // 1. Servisi çağır ve sonucu bekle
+      Map<String, dynamic> result = await _streakService.checkAndUpdateStreak();
+
+      int newStreak = result['streak'];
+      bool isIncreased = result['increased'];
+
+      // 2. Ekrandaki sayacı güncelle
+      setState(() {
+        _streakCount = newStreak;
+      });
+
+      // 3. Eğer seri arttıysa KUTLAMA yap (Context burada var!)
+      if (isIncreased && mounted) {
+        // mounted kontrolü ekranın hala açık olduğundan emin olur
+        // Biraz gecikmeli göster ki kullanıcı önce ana ekranı görsün
+        Future.delayed(const Duration(seconds: 1), () {
+          _showStreakCelebration(context, newStreak);
+        });
+      }
+    } catch (e) {
+      print("Streak hatası: $e");
     }
   }
 
@@ -130,21 +199,73 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Center(
-              child: Column(
+              child: Row(
+                // Column yerine Row kullanarak selamlama ve streak'i yan yana alıyoruz
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Günaydın, Ayşe ☀️', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.grey[900])),
+                      Text(
+                        'Günaydın, Ayşe ☀️',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[900],
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text('8 Kasım 2025, Cumartesi', style: TextStyle(color: Colors.grey[600])),
+                      Text(
+                        '8 Kasım 2025, Cumartesi',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
                     ],
                   ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).pushNamed('/profile');
-                    },
-                    child: CircleAvatar(backgroundColor: Colors.green[50], child: Icon(Icons.person, color: color)),
+                  Row(
+                    children: [
+                      // STREAK (SERİ) GÖSTERGESİ
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.orange.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.local_fire_department,
+                              color: Colors.orange,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$_streakCount',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.orange,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).pushNamed('/profile');
+                        },
+                        child: CircleAvatar(
+                          backgroundColor: Colors.green[50],
+                          child: Icon(Icons.person, color: color),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -160,7 +281,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.white,
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, 8))],
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
                     child: Center(
                       child: SizedBox(
@@ -178,11 +305,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('$_stepCount', style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: Colors.grey[900])),
+                      Text(
+                        '$_stepCount',
+                        style: TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.grey[900],
+                        ),
+                      ),
                       const SizedBox(height: 6),
-                      Text('Adım', style: TextStyle(fontSize: 15, color: Colors.grey[600])),
+                      Text(
+                        'Adım',
+                        style: TextStyle(fontSize: 15, color: Colors.grey[600]),
+                      ),
                     ],
-                  )
+                  ),
                 ],
               ),
             ),
@@ -199,7 +336,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
-                        _StatCard(title: 'Kalori', value: '1,840 kcal', icon: Icons.local_fire_department, color: Colors.orange),
+                        _StatCard(
+                          title: 'Kalori',
+                          value: '1,840 kcal',
+                          icon: Icons.local_fire_department,
+                          color: Colors.orange,
+                        ),
                         _StatCard(
                           title: 'Su',
                           value: '6/8 bardak',
@@ -242,12 +384,25 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: Colors.grey[200]!, width: 1),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 15, offset: const Offset(0, 4))],
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 15,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Bu Haftanın Kalori İstatistiği', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey[900])),
+                          Text(
+                            'Bu Haftanın Kalori İstatistiği',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[900],
+                            ),
+                          ),
                           const SizedBox(height: 12),
                           SizedBox(
                             height: 200,
@@ -266,10 +421,45 @@ class _HomeScreenState extends State<HomeScreen> {
                                   leftTitles: AxisTitles(
                                     sideTitles: SideTitles(showTitles: false),
                                   ),
-                                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                  topTitles: AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false),
+                                  ),
+                                  rightTitles: AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false),
+                                  ),
                                 ),
                                 borderData: FlBorderData(show: false),
+                                extraLinesData: ExtraLinesData(
+                                  horizontalLines: [
+                                    HorizontalLine(
+                                      y: _dailyCalorieGoal
+                                          .toDouble(), // Hedef değeri
+                                      color: Colors.green.withValues(
+                                        alpha: 0.6,
+                                      ), // Çizgi rengi (Yeşil veya Kırmızı yapabilirsiniz)
+                                      strokeWidth: 2, // Çizgi kalınlığı
+                                      dashArray: [
+                                        10,
+                                        5,
+                                      ], // Kesikli çizgi (10 dolu, 5 boş)
+                                      label: HorizontalLineLabel(
+                                        show: true,
+                                        alignment: Alignment.topRight,
+                                        padding: const EdgeInsets.only(
+                                          right: 5,
+                                          bottom: 5,
+                                        ),
+                                        style: TextStyle(
+                                          color: Colors.green.shade700,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 10,
+                                        ),
+                                        labelResolver: (line) =>
+                                            'Hedef: $_dailyCalorieGoal',
+                                      ),
+                                    ),
+                                  ],
+                                ),
                                 barGroups: _getWeeklyCalorieData(),
                                 gridData: FlGridData(show: false),
                               ),
@@ -281,7 +471,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -291,10 +481,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _screens,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _screens),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -348,7 +535,7 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icon(Icons.person_outline),
               activeIcon: Icon(Icons.person),
               label: 'Profil',
-            )
+            ),
           ],
         ),
       ),
@@ -377,9 +564,13 @@ class _HomeScreenState extends State<HomeScreen> {
   );
 
   Widget getTitles(double value, TitleMeta meta) {
-    const style = TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12);
+    const style = TextStyle(
+      color: Colors.grey,
+      fontWeight: FontWeight.bold,
+      fontSize: 12,
+    );
     const days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
-    
+
     return SideTitleWidget(
       meta: meta,
       child: Text(days[value.toInt()], style: style),
@@ -389,7 +580,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<BarChartGroupData> _getWeeklyCalorieData() {
     // Haftalık örnek kalori verisi
     final weeklyData = [1600, 1800, 1550, 1900, 1840, 1700, 2000];
-    
+
     return List.generate(7, (index) {
       return BarChartGroupData(
         x: index,
@@ -453,18 +644,101 @@ class _StatCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(title, style: const TextStyle(
-                        fontSize: 14, color: Colors.black54)),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black54,
+                      ),
+                    ),
                     const SizedBox(height: 6),
-                    Text(value,
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                    Text(
+                      value,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ],
                 ),
-              )
+              ),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+void _showStreakCelebration(BuildContext context, int days) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Container(
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 10,
+                offset: Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Animasyonlu Ateş İkonu (Veya Lottie animasyonu)
+              Container(
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.local_fire_department,
+                  size: 60,
+                  color: Colors.orange,
+                ),
+              ),
+              SizedBox(height: 20),
+              Text(
+                "$days Günlük Seri! 🔥",
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 10),
+              Text(
+                "İnanılmaz gidiyorsun! Disiplinini koruduğun için tebrikler.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  "Devam Et",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }
