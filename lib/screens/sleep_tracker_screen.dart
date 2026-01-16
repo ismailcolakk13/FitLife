@@ -97,13 +97,13 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
   }
 
   void _showManualSleepDialog(int dayIndex) {
-    double hours = sleepData[dayIndex];
-    double minutes = ((sleepData[dayIndex] % 1) * 60).toInt().toDouble();
+    double hours = sleepData[dayIndex].truncateToDouble();
+    double minutes = ((sleepData[dayIndex] % 1) * 60).roundToDouble();
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+        builder: (context, setDialogState) => AlertDialog(
           title: const Text('Uyku Süresi Ekle'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -114,9 +114,9 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                 min: 0,
                 max: 12,
                 divisions: 24,
-                label: '${hours.toStringAsFixed(1)} sa',
+                label: '${hours.toStringAsFixed(0)} sa',
                 onChanged: (value) {
-                  setState(() {
+                  setDialogState(() {
                     hours = value;
                   });
                 },
@@ -129,7 +129,7 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                 divisions: 59,
                 label: '${minutes.toStringAsFixed(0)} dk',
                 onChanged: (value) {
-                  setState(() {
+                  setDialogState(() {
                     minutes = value;
                   });
                 },
@@ -144,7 +144,7 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
             ElevatedButton(
               onPressed: () {
                 setState(() {
-                  sleepData[dayIndex] = hours + (minutes / 60);
+                  sleepData[dayIndex] = hours + (minutes / 60.0);
                 });
                 Navigator.pop(context);
               },
@@ -321,10 +321,19 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                     height: 250,
                     child: BarChart(
                       BarChartData(
-                        maxY: 10,
+                        maxY: 12,
                         minY: 0,
                         barTouchData: BarTouchData(
                           enabled: true,
+                          handleBuiltInTouches:true,
+                          touchCallback:(FlTouchEvent event, barTouchResponse){
+                            if(barTouchResponse==null || barTouchResponse.spot==null) return;
+                            if(event is FlTapUpEvent){
+                              final barIndex=barTouchResponse.spot!.touchedBarGroupIndex;
+
+                              if(!hasHealthData) _showManualSleepDialog(barIndex);
+                            }
+                          },
                           touchTooltipData: BarTouchTooltipData(
                             tooltipPadding: const EdgeInsets.all(8),
                             getTooltipItem: (group, groupIndex, rod, rodIndex) {
@@ -337,16 +346,7 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                               );
                             },
                           ),
-                          handleBuiltInTouches: true,
-                          touchCallback: (event, response) {
-                            if (response?.spot != null) {
-                              final barIndex =
-                                  response!.spot!.touchedBarGroupIndex;
-                              if (!hasHealthData) {
-                                _showManualSleepDialog(barIndex);
-                              }
-                            }
-                          },
+                          
                         ),
                         gridData: FlGridData(
                           show: true,
