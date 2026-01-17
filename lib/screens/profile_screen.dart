@@ -1,32 +1,134 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_application_6/services/session_manager.dart';
 import 'settings_screen.dart';
 import 'update_profile_info_screen.dart';
 import 'reminder_edit_screen.dart';
 
-
-// Profile screen implementation approximating the provided mockup.
-// Drop this file into `lib/profile_screen.dart` and use ProfileScreen() in your app.
-
-// ---------------- SETTINGS SCREEN ----------------
-
-
-// ---------------- PROFILE SCREEN ----------------
 class ProfileScreen extends StatefulWidget {
   static const routeName = '/profile';
-  const ProfileScreen({super.key});
+  final bool isOffline; // Offline mod kontrolü
+
+  const ProfileScreen({super.key, this.isOffline = false});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // Mocked user data
-  String name = 'Ayşe Yılmaz';
-  String subtitle = 'Yaş: 22 • Kadın';
-  int steps = 7236;
-  int calories = 1840;
-  int waterGlasses = 6; // of 8
-  Duration sleep = const Duration(hours: 7, minutes: 30);
+  // Veriler (Başlangıçta boş/sıfır)
+  String name = 'Kullanıcı';
+  String subtitle = 'Bilgi Yok';
+
+  // Anlık veriler (Ana sayfadan çekilenler)
+  int steps = 0;
+  int calories = 0;
+  int waterGlasses = 0;
+  Duration sleep = const Duration(hours: 0, minutes: 0);
+
+  // Hedefler
+  int stepGoal = 10000;
+  int waterGoal = 8;
+  Duration sleepGoal = const Duration(hours: 8, minutes: 0);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAllData();
+  }
+
+  // --- TÜM VERİLERİ ÇEKME ---
+  Future<void> _loadAllData() async {
+    await _fetchUserData(); // İsim, Boy, Kilo, Hedefler
+    await _fetchDailyStats(); // Su, Uyku (Adım telefondan geldiği için burada 0 kalabilir veya eklenebilir)
+  }
+
+  // 1. Kullanıcı Bilgileri ve Hedefler
+  Future<void> _fetchUserData() async {
+    if (widget.isOffline) {
+      final user = await SessionManager.getOfflineUser();
+      if (user != null) {
+        if (mounted) {
+          setState(() {
+            name = "${user.firstName} ${user.lastName}";
+            subtitle = "Yaş: ${user.age ?? '-'} • ${user.gender ?? '-'}";
+            stepGoal = user.dailyStepGoal ?? 10000;
+            waterGoal = user.dailyWaterGoal ?? 8;
+            int sleepMin = user.sleepGoalMinutes ?? 480;
+            sleepGoal = Duration(hours: sleepMin ~/ 60, minutes: sleepMin % 60);
+          });
+        }
+      }
+    } else {
+      // Firebase işlemleri buraya (Online mod için)
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .get();
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
+          if (mounted) {
+            setState(() {
+              name = "${data['Name'] ?? ''} ${data['Surname'] ?? ''}";
+              subtitle =
+                  "Yaş: ${data['Age'] ?? '-'} • ${data['Gender'] ?? '-'}";
+              stepGoal = data['dailyStepGoal'] ?? 10000;
+              waterGoal = data['dailyWaterGoal'] ?? 8;
+              int sleepMin = data['sleepGoalMinutes'] ?? 480;
+              sleepGoal = Duration(
+                hours: sleepMin ~/ 60,
+                minutes: sleepMin % 60,
+              );
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // 2. Günlük Tüketim Verileri (Su, Uyku)
+  Future<void> _fetchDailyStats() async {
+    // Tarih anahtarı
+    final now = DateTime.now();
+    String dateKey =
+        "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+    // Su verisi
+    final waterMap = await SessionManager.getWaterLog();
+    int todayWater = waterMap[dateKey] ?? 0;
+
+    // Uyku verisi
+    final sleepMap = await SessionManager.getSleepLog();
+    double sleepHoursVal = sleepMap[dateKey] ?? 0.0;
+    int sHours = sleepHoursVal.toInt();
+    int sMinutes = ((sleepHoursVal - sHours) * 60).toInt();
+
+    // Kalori verisi (Haftalık kaloriden bugünü çek)
+    final activityMap = await SessionManager.getActivityMap();
+    double todayCal = 0;
+    // Basit eşleşme (Detaylısı için önceki kodlara bakılabilir)
+    for (var entry in activityMap.entries) {
+      if (entry.key.day == now.day &&
+          entry.key.month == now.month &&
+          entry.key.year == now.year) {
+        for (var act in entry.value) {
+          if (act != null) todayCal += act.calories;
+        }
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        waterGlasses = todayWater;
+        sleep = Duration(hours: sHours, minutes: sMinutes);
+        calories = todayCal.toInt();
+        // steps = ... (Adım verisi health paketinden geldiği için burada ayrıca çekmek gerekir veya ana sayfadan passlanabilir)
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,24 +136,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profil'),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.person,color: Colors.green[500]),
+            SizedBox(width: 12),
+            Text('Profil', style: TextStyle(fontSize: 24)),
+          ],
+        ),
         centerTitle: true,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 0,
         actions: [
-         IconButton(
-  icon: const Icon(Icons.settings),
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const SettingsScreen(),
-      ),
-    );
-  },
-)
-
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
+          ),
         ],
       ),
       backgroundColor: const Color(0xFFF7F8FA),
@@ -64,7 +170,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 18),
             _buildPrimaryStatsCard(),
             const SizedBox(height: 16),
-           
             _buildSmallStatsGrid(),
             const SizedBox(height: 18),
             _buildGoalsCard(),
@@ -83,7 +188,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         CircleAvatar(
           radius: 40,
           backgroundColor: Colors.grey.shade200,
-          backgroundImage: null, // replace with NetworkImage(...) if available
+          backgroundImage: null,
           child: const Icon(Icons.person, size: 44, color: Colors.grey),
         ),
         const SizedBox(width: 12),
@@ -99,55 +204,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       Text(
                         name,
-                        style: theme.textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold),
+                        style: theme.textTheme.titleMedium!.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         subtitle,
-                        style: theme.textTheme.bodySmall!.copyWith(color: Colors.grey[600]),
+                        style: theme.textTheme.bodySmall!.copyWith(
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ],
                   ),
-                  
                 ],
               ),
               const SizedBox(height: 10),
               Row(
                 children: [
-                 InkWell(
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const UpdateProfileInfoScreen(),
-      ),
-    );
-  },
-  borderRadius: BorderRadius.circular(8),
-  child: Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.edit, size: 18, color: Colors.green[700]),
-        const SizedBox(width: 6),
-        Text(
-          'Bilgileri Güncelle',
-          style: TextStyle(
-            color: Colors.green[700],
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    ),
-  ),
-),
-
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => UpdateProfileInfoScreen(
+                            isOffline: widget.isOffline,
+                          ),
+                        ),
+                      ).then(
+                        (_) => _loadAllData(),
+                      ); // Dönüşte verileri güncelle
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 6,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.edit, size: 18, color: Colors.green[700]),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Bilgileri Güncelle',
+                            style: TextStyle(
+                              color: Colors.green[700],
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
-              )
+              ),
             ],
           ),
-        )
+        ),
       ],
     );
   }
@@ -160,26 +274,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
-            // Circular Steps Indicator (simple)
             _buildStepsCircle(),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Günaydın, $name', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(
+                    'Merhaba, ${name.split(' ')[0]}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       _tinyStat('Kalori', '$calories kcal'),
-                      _tinyStat('Su', '$waterGlasses/8 bardak'),
-                      _tinyStat('Uyku', '${sleep.inHours} sa ${sleep.inMinutes % 60} dk'),
+                      _tinyStat('Su', '$waterGlasses/$waterGoal brd'),
+                      _tinyStat(
+                        'Uyku',
+                        '${sleep.inHours}s ${sleep.inMinutes % 60}dk',
+                      ),
                     ],
-                  )
+                  ),
                 ],
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -187,7 +306,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildStepsCircle() {
-    final percent = (steps / 10000).clamp(0.0, 1.0);
+    // Adım verisi 0 olsa bile hata vermemesi için kontrol
+    final percent = (stepGoal > 0) ? (steps / stepGoal).clamp(0.0, 1.0) : 0.0;
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -204,11 +324,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(steps.toString(), style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(
+              steps.toString(),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 2),
-            const Text('Adım', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            const Text(
+              'Adım',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
           ],
-        )
+        ),
       ],
     );
   }
@@ -224,15 +350,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
- 
   Widget _buildSmallStatsGrid() {
     return Row(
       children: [
-        Expanded(child: _miniCard('Aktivite', '45 dk', '45 dk koşu')),
+        // Buradaki veriler manuel girilen son aktivite verisinden de çekilebilir
+        Expanded(child: _miniCard('Aktivite', 'Özet', '$calories kcal')),
         const SizedBox(width: 12),
-        Expanded(child: _miniCard('Su Takibi', '$waterGlasses/8', 'Günlük')),        
+        Expanded(
+          child: _miniCard('Su Takibi', '$waterGlasses/$waterGoal', 'Günlük'),
+        ),
         const SizedBox(width: 12),
-        Expanded(child: _miniCard('Uyku Takibi', '${sleep.inHours}h ${sleep.inMinutes % 60}m', 'Hedef: 7h 30m')),
+        Expanded(
+          child: _miniCard(
+            'Uyku Takibi',
+            '${sleep.inHours}h ${sleep.inMinutes % 60}m',
+            'Hedef: ${sleepGoal.inHours}h',
+          ),
+        ),
       ],
     );
   }
@@ -245,11 +379,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
             const SizedBox(height: 8),
             Text(big, style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
-            Text(small, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            Text(
+              small,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
           ],
         ),
       ),
@@ -264,13 +404,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Hedefler', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Hedefler',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 10),
-            _goalRow('Adım Hedefi', '10.000'),
+            _goalRow('Adım Hedefi', '$stepGoal'),
             const SizedBox(height: 8),
-            _goalRow('Su Hedefi', '8 bardak'),
+            _goalRow('Su Hedefi', '$waterGoal bardak'),
             const SizedBox(height: 8),
-            _goalRow('Uyku Hedefi', '7 sa 30 dk'),
+            _goalRow(
+              'Uyku Hedefi',
+              '${sleepGoal.inHours} sa ${sleepGoal.inMinutes > 0 ? "${sleepGoal.inMinutes} dk" : ""}',
+            ),
           ],
         ),
       ),
@@ -287,82 +433,71 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-Widget _buildRemindersCard() {
-  return Card(
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Hatırlatıcılar',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+  Widget _buildRemindersCard() {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Hatırlatıcılar',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
 
-          //  SU HATIRLATICISI
-          Row(
-            children: [
-              const Icon(Icons.notifications_none),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Su içme hatırlatıcısı\nHer 2 saatte bir',
+            //  SU HATIRLATICISI
+            Row(
+              children: [
+                const Icon(Icons.notifications_none),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text('Su içme hatırlatıcısı\nHer 2 saatte bir'),
                 ),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ReminderEditScreen(
-                        title: 'Su Hatırlatıcısı',
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const ReminderEditScreen(title: 'Su Hatırlatıcısı'),
                       ),
-                    ),
-                  );
-                },
-                child: const Text('Düzenle'),
-              ),
-            ],
-          ),
-
-          const Divider(),
-
-          //  UYKU HATIRLATICISI
-          Row(
-            children: [
-              const Icon(Icons.bedtime_outlined),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Uyku hatırlatıcısı\nHedef uyku saati',
+                    );
+                  },
+                  child: const Text('Düzenle'),
                 ),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ReminderEditScreen(
-                        title: 'Uyku Hatırlatıcısı',
+              ],
+            ),
+
+            const Divider(),
+
+            //  UYKU HATIRLATICISI
+            Row(
+              children: [
+                const Icon(Icons.bedtime_outlined),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text('Uyku hatırlatıcısı\nHedef uyku saati'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ReminderEditScreen(
+                          title: 'Uyku Hatırlatıcısı',
+                        ),
                       ),
-                    ),
-                  );
-                },
-                child: const Text('Güncelle'),
-              ),
-            ],
-          ),
-        ],
+                    );
+                  },
+                  child: const Text('Güncelle'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
-
+    );
+  }
 }
