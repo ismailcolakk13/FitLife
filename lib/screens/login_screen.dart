@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_6/services/session_manager.dart';
 import 'signup_screen.dart';
 import 'home_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../services/firebase_authService.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
+// import '../services/firebase_authService.dart';
 // DB erişimi için
 // Model erişimi
 import 'offline_user_creation_screen.dart';
@@ -21,7 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
 
-  final _auth = AuthService();
+  // final _auth = AuthService();
 
   bool loading = false;
   bool hidePassword = true;
@@ -57,71 +57,71 @@ class _LoginScreenState extends State<LoginScreen> {
   // ---------- Submit (Layer 1 + Layer 2) ----------
 
   Future<void> submit() async {
-    FocusScope.of(context).unfocus();
+    // FocusScope.of(context).unfocus();
 
-    if (!_formKey.currentState!.validate()) return;
+    // if (!_formKey.currentState!.validate()) return;
 
-    setState(() => loading = true);
+    // setState(() => loading = true);
 
-    try {
-      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailCtrl.text.trim(),
-        password: _passCtrl.text.trim(),
-      );
-      final user = credential.user;
-      if (user != null && !user.emailVerified) {
-        await FirebaseAuth.instance.signOut();
+    // try {
+    //   final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+    //     email: _emailCtrl.text.trim(),
+    //     password: _passCtrl.text.trim(),
+    //   );
+    //   final user = credential.user;
+    //   if (user != null && !user.emailVerified) {
+    //     await FirebaseAuth.instance.signOut();
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('E-postanızı doğrulamadan giriş yapamazsınız'),
-          ),
-        );
-      } else {
-        /*
-        final uid = FirebaseAuth.instance.currentUser!.uid;
+    //     ScaffoldMessenger.of(context).showSnackBar(
+    //       const SnackBar(
+    //         content: Text('E-postanızı doğrulamadan giriş yapamazsınız'),
+    //       ),
+    //     );
+    //   } else {
+    //     /*
+    //     final uid = FirebaseAuth.instance.currentUser!.uid;
 
-        final doc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(uid)
-            .get();
+    //     final doc = await FirebaseFirestore.instance
+    //         .collection('users')
+    //         .doc(uid)
+    //         .get();
 
-        if (doc.exists) {
-          // ✅ Kullanıcının datası var
-        } else {
-          // ❌ Henüz kayıtlı değil
-        }
-        */
-        Navigator.pushReplacementNamed(context, HomeScreen.routeName);
-      }
-    } on FirebaseAuthException catch (e) {
-      final message = switch (e.code) {
-        'user-not-found' ||
-        'wrong-password' ||
-        'invalid-credential' ||
-        'invalid_login_credentials' => 'E-posta veya şifre hatalı',
+    //     if (doc.exists) {
+    //       // ✅ Kullanıcının datası var
+    //     } else {
+    //       // ❌ Henüz kayıtlı değil
+    //     }
+    //     */
+    //     Navigator.pushReplacementNamed(context, HomeScreen.routeName);
+    //   }
+    // } on FirebaseAuthException catch (e) {
+    //   final message = switch (e.code) {
+    //     'user-not-found' ||
+    //     'wrong-password' ||
+    //     'invalid-credential' ||
+    //     'invalid_login_credentials' => 'E-posta veya şifre hatalı',
 
-        'email-already-in-use' => 'Bu e-posta zaten kayıtlı',
+    //     'email-already-in-use' => 'Bu e-posta zaten kayıtlı',
 
-        'invalid-email' => 'Geçersiz e-posta formatı',
+    //     'invalid-email' => 'Geçersiz e-posta formatı',
 
-        'weak-password' => 'Şifre çok zayıf',
+    //     'weak-password' => 'Şifre çok zayıf',
 
-        'too-many-requests' => 'Çok fazla deneme yapıldı. Lütfen bekleyin.',
+    //     'too-many-requests' => 'Çok fazla deneme yapıldı. Lütfen bekleyin.',
 
-        _ => 'Giriş başarısız. Lütfen tekrar deneyin.',
-      };
+    //     _ => 'Giriş başarısız. Lütfen tekrar deneyin.',
+    //   };
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
-    } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Beklenmeyen bir hata oluştu!")),
-      );
-    }
+    //   ScaffoldMessenger.of(
+    //     context,
+    //   ).showSnackBar(SnackBar(content: Text(message)));
+    // } catch (_) {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(content: Text("Beklenmeyen bir hata oluştu!")),
+    //   );
+    // }
 
-    setState(() => loading = false);
+    // setState(() => loading = false);
   }
 
   @override

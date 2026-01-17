@@ -1,5 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_6/services/session_manager.dart';
 
@@ -57,27 +57,27 @@ class _UpdateProfileInfoScreenState extends State<UpdateProfileInfoScreen> {
         });
       }
     } else {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid != null) {
-        final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-        if (doc.exists) {
-          final data = doc.data() as Map<String, dynamic>;
-          setState(() {
-            nameCtrl.text = data['Name'] ?? '';
-            surnameCtrl.text = data['Surname'] ?? '';
-            ageCtrl.text = data['Age']?.toString() ?? '';
-            gender = data['Gender'] ?? 'Kadın';
+      // final uid = FirebaseAuth.instance.currentUser?.uid;
+      // if (uid != null) {
+      //   final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      //   if (doc.exists) {
+      //     final data = doc.data() as Map<String, dynamic>;
+      //     setState(() {
+      //       nameCtrl.text = data['Name'] ?? '';
+      //       surnameCtrl.text = data['Surname'] ?? '';
+      //       ageCtrl.text = data['Age']?.toString() ?? '';
+      //       gender = data['Gender'] ?? 'Kadın';
             
-            heightCtrl.text = data['heightCm']?.toString() ?? '';
-            weightCtrl.text = data['weightKg']?.toString() ?? '';
+      //       heightCtrl.text = data['heightCm']?.toString() ?? '';
+      //       weightCtrl.text = data['weightKg']?.toString() ?? '';
             
-            stepGoalCtrl.text = data['dailyStepGoal']?.toString() ?? '10000';
-            waterGoalCtrl.text = data['dailyWaterGoal']?.toString() ?? '8';
-            int hours = (data['sleepGoalMinutes'] ?? 480) ~/ 60;
-            sleepGoalCtrl.text = hours.toString();
-          });
-        }
-      }
+      //       stepGoalCtrl.text = data['dailyStepGoal']?.toString() ?? '10000';
+      //       waterGoalCtrl.text = data['dailyWaterGoal']?.toString() ?? '8';
+      //       int hours = (data['sleepGoalMinutes'] ?? 480) ~/ 60;
+      //       sleepGoalCtrl.text = hours.toString();
+      //     });
+      //   }
+      // }
     }
   }
 
@@ -108,14 +108,14 @@ class _UpdateProfileInfoScreenState extends State<UpdateProfileInfoScreen> {
           await SessionManager.saveOfflineUser(updated);
         }
       } else {
-        final uid = FirebaseAuth.instance.currentUser?.uid;
-        if (uid != null) {
-          await FirebaseFirestore.instance.collection('users').doc(uid).update({
-            'Name': fName, 'Surname': lName, 'Age': age, 'Gender': gender,
-            'heightCm': height, 'weightKg': weight,
-            'dailyStepGoal': sGoal, 'dailyWaterGoal': wGoal, 'sleepGoalMinutes': slGoalMin,
-          });
-        }
+        // final uid = FirebaseAuth.instance.currentUser?.uid;
+        // if (uid != null) {
+        //   await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        //     'Name': fName, 'Surname': lName, 'Age': age, 'Gender': gender,
+        //     'heightCm': height, 'weightKg': weight,
+        //     'dailyStepGoal': sGoal, 'dailyWaterGoal': wGoal, 'sleepGoalMinutes': slGoalMin,
+        //   });
+        // }
       }
 
       if (mounted) {

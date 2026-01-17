@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../database//firebase_dataBase.dart';
+// import '../database//firebase_dataBase.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
 import 'home_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firebase_authService.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -18,7 +18,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _lastName = TextEditingController();
   final _email = TextEditingController();
   final _pass = TextEditingController();
-  final _auth = AuthService();
+  // final _auth = AuthService();
 
   bool loading = false;
   bool hidePassword = true;
@@ -55,75 +55,75 @@ class _SignupScreenState extends State<SignupScreen> {
   // ---------- Submit (Layer 1 + Layer 2) ----------
 
   Future<void> submit() async {
-    FocusScope.of(context).unfocus();
+  //   FocusScope.of(context).unfocus();
 
-    if (!_formKey.currentState!.validate()) return;
+  //   if (!_formKey.currentState!.validate()) return;
 
-    setState(() => loading = true);
+  //   setState(() => loading = true);
 
-    try {
-      final userCredential =
-      await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-        email: _email.text.trim(),
-        password: _pass.text.trim(),
-      );
+  //   try {
+  //     final userCredential =
+  //     await FirebaseAuth.instance
+  //         .createUserWithEmailAndPassword(
+  //       email: _email.text.trim(),
+  //       password: _pass.text.trim(),
+  //     );
 
-      final user = userCredential.user;
+  //     final user = userCredential.user;
 
-      if (user != null && !user.emailVerified) {
-        final userId = FirebaseAuth.instance.currentUser!.uid;
-        await FirebaseDatabaseService(uid: userId).updateUserData(_firstName.text, 18, true);
-        await user.sendEmailVerification();
-        Navigator.pop(context, "verify");
-      }
-      else
-      {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Beklenmeyen bir hata oluştu!")));
-      }
+  //     if (user != null && !user.emailVerified) {
+  //       final userId = FirebaseAuth.instance.currentUser!.uid;
+  //       await FirebaseDatabaseService(uid: userId).updateUserData(_firstName.text, 18, true);
+  //       await user.sendEmailVerification();
+  //       Navigator.pop(context, "verify");
+  //     }
+  //     else
+  //     {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //           const SnackBar(content: Text("Beklenmeyen bir hata oluştu!")));
+  //     }
 
-      // kullanıcıyı çıkart
-      await FirebaseAuth.instance.signOut();
+  //     // kullanıcıyı çıkart
+  //     await FirebaseAuth.instance.signOut();
 
-    } on FirebaseAuthException catch (e) {
-      final message = switch (e.code) {
-        'user-not-found' ||
-        'wrong-password' ||
-        'invalid-credential' ||
-        'invalid_login_credentials' =>
-        'E-posta veya şifre hatalı',
+  //   } on FirebaseAuthException catch (e) {
+  //     final message = switch (e.code) {
+  //       'user-not-found' ||
+  //       'wrong-password' ||
+  //       'invalid-credential' ||
+  //       'invalid_login_credentials' =>
+  //       'E-posta veya şifre hatalı',
 
-        'email-already-in-use' =>
-        'Bu e-posta zaten kayıtlı',
+  //       'email-already-in-use' =>
+  //       'Bu e-posta zaten kayıtlı',
 
-        'invalid-email' =>
-        'Geçersiz e-posta formatı',
+  //       'invalid-email' =>
+  //       'Geçersiz e-posta formatı',
 
-        'weak-password' =>
-        'Şifre çok zayıf',
+  //       'weak-password' =>
+  //       'Şifre çok zayıf',
 
-        'too-many-requests' =>
-        'Çok fazla deneme yapıldı. Lütfen bekleyin.',
+  //       'too-many-requests' =>
+  //       'Çok fazla deneme yapıldı. Lütfen bekleyin.',
 
-        _ =>
-        'Giriş başarısız. Lütfen tekrar deneyin.'
-      };
+  //       _ =>
+  //       'Giriş başarısız. Lütfen tekrar deneyin.'
+  //     };
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
-    } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Beklenmeyen bir hata oluştu!")),
-      );
-    }
+  //     ScaffoldMessenger.of(context)
+  //         .showSnackBar(SnackBar(content: Text(message)));
+  //   } catch (_) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text("Beklenmeyen bir hata oluştu!")),
+  //     );
+  //   }
 
-    setState(() => loading = false);
+  //   setState(() => loading = false);
   }
 
 
 
-  final AuthService _authService = AuthService();
+  // final AuthService _authService = AuthService();
   final bool _isLoading = false;
   String? _error;
 
@@ -138,7 +138,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
   void signUp() {
     if (_formKey.currentState?.validate() ?? false) {
-      submit();
+      // submit();
     }
 
     Navigator.pushReplacementNamed(context, HomeScreen.routeName);

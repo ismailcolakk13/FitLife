@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Eklendi
+// import 'package:firebase_core/firebase_core.dart';
+// import 'package:firebase_auth/firebase_auth.dart'; // Eklendi
 import "package:flutter_dotenv/flutter_dotenv.dart";
 
 // Ekranlar
@@ -16,7 +16,7 @@ import 'services/session_manager.dart';
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  // await Firebase.initializeApp();
   await dotenv.load(fileName: ".env");
   runApp(const MyApp());
 }
@@ -27,9 +27,9 @@ class MyApp extends StatelessWidget {
   // --- BAŞLANGIÇ EKRANINI SEÇEN FONKSİYON ---
   Future<Widget> _getStartScreen() async {
     // 1. Firebase (Online) Giriş Kontrolü
-    if (FirebaseAuth.instance.currentUser != null) {
-      return const HomeScreen(isOffline: false);
-    }
+    // if (FirebaseAuth.instance.currentUser != null) {
+    //   return const HomeScreen(isOffline: false);
+    // }
 
     // 2. Onboarding Tamamlanmış mı? (Offline)
     // SessionManager'a eklediğimiz fonksiyonu burada kullanıyoruz

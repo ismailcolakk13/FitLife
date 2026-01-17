@@ -1,5 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_6/services/session_manager.dart';
 import 'settings_screen.dart';
@@ -60,33 +60,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
           });
         }
       }
-    } else {
-      // Firebase işlemleri buraya (Online mod için)
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid != null) {
-        final doc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(uid)
-            .get();
-        if (doc.exists) {
-          final data = doc.data() as Map<String, dynamic>;
-          if (mounted) {
-            setState(() {
-              name = "${data['Name'] ?? ''} ${data['Surname'] ?? ''}";
-              subtitle =
-                  "Yaş: ${data['Age'] ?? '-'} • ${data['Gender'] ?? '-'}";
-              stepGoal = data['dailyStepGoal'] ?? 10000;
-              waterGoal = data['dailyWaterGoal'] ?? 8;
-              int sleepMin = data['sleepGoalMinutes'] ?? 480;
-              sleepGoal = Duration(
-                hours: sleepMin ~/ 60,
-                minutes: sleepMin % 60,
-              );
-            });
-          }
-        }
-      }
-    }
+    } 
+    // else {
+    //   // Firebase işlemleri buraya (Online mod için)
+    //   final uid = FirebaseAuth.instance.currentUser?.uid;
+    //   if (uid != null) {
+    //     final doc = await FirebaseFirestore.instance
+    //         .collection('users')
+    //         .doc(uid)
+    //         .get();
+    //     if (doc.exists) {
+    //       final data = doc.data() as Map<String, dynamic>;
+    //       if (mounted) {
+    //         setState(() {
+    //           name = "${data['Name'] ?? ''} ${data['Surname'] ?? ''}";
+    //           subtitle =
+    //               "Yaş: ${data['Age'] ?? '-'} • ${data['Gender'] ?? '-'}";
+    //           stepGoal = data['dailyStepGoal'] ?? 10000;
+    //           waterGoal = data['dailyWaterGoal'] ?? 8;
+    //           int sleepMin = data['sleepGoalMinutes'] ?? 480;
+    //           sleepGoal = Duration(
+    //             hours: sleepMin ~/ 60,
+    //             minutes: sleepMin % 60,
+    //           );
+    //         });
+    //       }
+    //     }
+    //   }
+    // }
   }
 
   // 2. Günlük Tüketim Verileri (Su, Uyku)

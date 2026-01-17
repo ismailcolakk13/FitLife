@@ -1,7 +1,7 @@
 // Platform kontrolü için şart
 import 'dart:math';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_application_6/services/session_manager.dart';
@@ -219,62 +219,62 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     // B) ONLINE MOD (FIREBASE)
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) {
-      debugPrint(
-        "❌ HATA: Firebase kullanıcısı (currentUser) null! Oturum açılmamış olabilir.",
-      );
-      return;
-    }
+    // final currentUser = FirebaseAuth.instance.currentUser;
+    // if (currentUser == null) {
+    //   debugPrint(
+    //     "❌ HATA: Firebase kullanıcısı (currentUser) null! Oturum açılmamış olabilir.",
+    //   );
+    //   return;
+    // }
 
-    final uid = currentUser.uid;
-    debugPrint("--- Online modda veri çekiliyor. UID: $uid ---");
+    // final uid = currentUser.uid;
+    // debugPrint("--- Online modda veri çekiliyor. UID: $uid ---");
 
-    try {
-      DocumentSnapshot doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .get();
+    // try {
+    //   DocumentSnapshot doc = await FirebaseFirestore.instance
+    //       .collection('users')
+    //       .doc(uid)
+    //       .get();
 
-      if (doc.exists && doc.data() != null) {
-        var data = doc.data() as Map<String, dynamic>;
-        debugPrint("✅ Firebase'den ham veri geldi: $data");
+    //   if (doc.exists && doc.data() != null) {
+    //     var data = doc.data() as Map<String, dynamic>;
+    //     debugPrint("✅ Firebase'den ham veri geldi: $data");
 
-        String fetchedName = "";
+    //     String fetchedName = "";
 
-        // İsim alanını farklı anahtarlarla kontrol et (Büyük/Küçük harf duyarlılığı için)
-        if (data.containsKey('Name')) {
-          fetchedName = data['Name'];
-        } else if (data.containsKey('name')) {
-          fetchedName = data['name'];
-        } else if (data.containsKey('first_name')) {
-          fetchedName = data['first_name'];
-        } else if (currentUser.displayName != null &&
-            currentUser.displayName!.isNotEmpty) {
-          fetchedName = currentUser.displayName!;
-        }
+    //     // İsim alanını farklı anahtarlarla kontrol et (Büyük/Küçük harf duyarlılığı için)
+    //     if (data.containsKey('Name')) {
+    //       fetchedName = data['Name'];
+    //     } else if (data.containsKey('name')) {
+    //       fetchedName = data['name'];
+    //     } else if (data.containsKey('first_name')) {
+    //       fetchedName = data['first_name'];
+    //     } else if (currentUser.displayName != null &&
+    //         currentUser.displayName!.isNotEmpty) {
+    //       fetchedName = currentUser.displayName!;
+    //     }
 
-        if (mounted) {
-          setState(() {
-            // Eğer isim bulunduysa güncelle
-            if (fetchedName.isNotEmpty) {
-              _userName = fetchedName;
-            }
+    //     if (mounted) {
+    //       setState(() {
+    //         // Eğer isim bulunduysa güncelle
+    //         if (fetchedName.isNotEmpty) {
+    //           _userName = fetchedName;
+    //         }
 
-            // Kalori hedefini güncelle
-            if (data.containsKey('dailyCalorieGoal')) {
-              _dailyCalorieGoal = (data['dailyCalorieGoal'] as num).toInt();
-            }
-          });
-        }
-      } else {
-        debugPrint(
-          "⚠️ Firebase'de bu UID ($uid) için 'users' koleksiyonunda doküman YOK!",
-        );
-      }
-    } catch (e) {
-      debugPrint("❌ Firebase Veri Çekme Hatası: $e");
-    }
+    //         // Kalori hedefini güncelle
+    //         if (data.containsKey('dailyCalorieGoal')) {
+    //           _dailyCalorieGoal = (data['dailyCalorieGoal'] as num).toInt();
+    //         }
+    //       });
+    //     }
+    //   } else {
+    //     debugPrint(
+    //       "⚠️ Firebase'de bu UID ($uid) için 'users' koleksiyonunda doküman YOK!",
+    //     );
+    //   }
+    // } catch (e) {
+    //   debugPrint("❌ Firebase Veri Çekme Hatası: $e");
+    // }
   }
 
   // --- 2. STREAK (SERİ) MANTIĞI ---
@@ -567,13 +567,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   }
                 } else {
                   // --- FIREBASE GÜNCELLEME ---
-                  final uid = FirebaseAuth.instance.currentUser?.uid;
-                  if (uid != null) {
-                    await FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(uid)
-                        .update({'dailyCalorieGoal': newGoal});
-                  }
+                  // final uid = FirebaseAuth.instance.currentUser?.uid;
+                  // if (uid != null) {
+                  //   await FirebaseFirestore.instance
+                  //       .collection('users')
+                  //       .doc(uid)
+                  //       .update({'dailyCalorieGoal': newGoal});
+                  // }
                 }
                 if (mounted) Navigator.pop(context);
               }
