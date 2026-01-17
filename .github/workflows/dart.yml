@@ -20,8 +20,23 @@ jobs:
         run: |
           echo "${{ secrets.ENV_FILE_BASE64 }}" | base64 --decode > .env
 
-      - run: pod repo update
-        working-directory: ios
+      - name: Update Deployment Target & Install Pods
+        run: |
+          # 1. Xcode proje ayarını 14.0 yap
+          sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9\.]*/IPHONEOS_DEPLOYMENT_TARGET = 14.0/g' ios/Runner.xcodeproj/project.pbxproj
+          
+          # 2. Podfile içindeki platform ayarını 14.0 yap (yorum satırıysa açar, eskiyse günceller)
+          sed -i '' "s/# platform :ios, .*/platform :ios, '14.0'/" ios/Podfile
+          sed -i '' "s/platform :ios, .*/platform :ios, '14.0'/" ios/Podfile
+
+          # 3. Eski kilit dosyasını sil (Health paketi hatasını önlemek için şart)
+          rm -f ios/Podfile.lock
+
+          # 4. Podları güncelle ve yükle
+          cd ios
+          pod repo update
+          pod install
+        shell: bash
 
       - run: flutter build ios --release --no-codesign
 
@@ -40,6 +55,6 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: build/ios/iphoneos/FlutterIpaExport.ipa
-          tag: v1.0
+          tag: v1.0.${{ github.run_number }}
           overwrite: true
-          body: "This is first release"
+          body: "iOS Build Release #${{ github.run_number }}"
