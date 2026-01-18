@@ -9,7 +9,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Flutter Application 6</string>
+	<string>Fitlife v2</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -17,7 +17,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>flutter_application_6</string>
+	<string>Fitlife v2</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -49,9 +49,20 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	
 	<key>NSHealthShareUsageDescription</key>
-	<string>Sağlık verilerinize erişmek için izin gerekli</string>
+    <string>Uygulama, günlük aktivitenizi ve yaktığınız kaloriyi hesaplamak için adım verilerinize ihtiyaç duyar.</string>
+    
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>Sağlık verilerinizi güncellemek için izin gerekli</string>
+    <string>Uygulama, aktivite verilerini sağlık uygulamasıyla senkronize etmek ister.</string>
+
+	<key>NSCameraUsageDescription</key>
+    <string>Yediğiniz yemeklerin fotoğrafını çekip kalori analizi yapmak için kameraya erişim gerekiyor.</string>
+
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Galeriden yemek fotoğrafı seçebilmeniz için erişim gerekiyor.</string>
+
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Kamera kullanımı için mikrofon erişimi gerekiyor.</string>
 </dict>
 </plist>
