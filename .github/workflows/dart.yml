@@ -87,4 +87,100 @@ jobs:
               raise "#{generated_xcode_build_settings_path} must exist."
             end
             File.foreach(generated_xcode_build_settings_path) do |line|
-              matches = line.match(/
+              matches = line.match(/FLUTTER_ROOT\=(.*)/)
+              return matches[1] if matches
+            end
+          end
+
+          require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+
+          target 'Runner' do
+            use_frameworks!
+            use_modular_headers!
+            flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+          end
+
+          post_install do |installer|
+            installer.pods_project.targets.each do |target|
+              flutter_additional_ios_build_settings(target)
+              target.build_configurations.each do |config|
+                 config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
+                 
+                 # KRİTİK: Bu makrolar olmadan uygulama izin isterken çöker
+                 config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
+                  '$(inherited)',
+                  'PERMISSION_HEALTH=1',
+                  'PERMISSION_CAMERA=1',
+                  'PERMISSION_PHOTOS=1',
+                  'PERMISSION_MICROPHONE=1',
+                ]
+              end
+            end
+          end
+          EOF
+
+          # 4. Kurulumu Yap
+          cd ios
+          pod repo update
+          pod install --repo-update
+        shell: bash
+
+      # ---------------------------------------------------------
+      # ADIM C: HealthKit Yeteneğini (Entitlements) Projeye Ekleme
+      # ---------------------------------------------------------
+      - name: Inject Entitlements into Project
+        run: |
+          # 1. Runner.entitlements dosyasını oluştur
+          cat <<EOF > ios/Runner/Runner.entitlements
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>com.apple.developer.healthkit</key>
+              <true/>
+              <key>com.apple.developer.healthkit.access</key>
+              <array/>
+          </dict>
+          </plist>
+          EOF
+
+          # 2. Proje dosyasına bu entitlements dosyasını zorla tanıt
+          PBXPROJ="ios/Runner.xcodeproj/project.pbxproj"
+          
+          # Eğer proje ayarlarında Entitlements tanımlı değilse ekle
+          if ! grep -q "CODE_SIGN_ENTITLEMENTS" "$PBXPROJ"; then
+            sed -i '' '/PRODUCT_BUNDLE_IDENTIFIER/a\
+            CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;' $PBXPROJ
+            echo "✅ Runner.entitlements proje ayarlarına enjekte edildi."
+          else
+            echo "ℹ️ Entitlements ayarı zaten varmış."
+          fi
+        shell: bash  
+
+      # ---------------------------------------------------------
+      # ADIM D: Release Build (Telefonda çalışması için şart)
+      # ---------------------------------------------------------
+      - run: flutter build ios --release --no-codesign
+
+      # Manuel IPA Paketleme (Payload yöntemi)
+      - run: mkdir Payload
+        working-directory: build/ios/iphoneos
+
+      - run: mv Runner.app/ Payload
+        working-directory: build/ios/iphoneos
+
+      - name: Zip output
+        run: zip -qq -r -9 FitLife.ipa Payload
+        working-directory: build/ios/iphoneos
+
+      # ---------------------------------------------------------
+      # ADIM E: Dosyayı Yükleme (Releases Kısmına)
+      # ---------------------------------------------------------
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: build/ios/iphoneos/FitLife.ipa
+          tag: v1.0.${{ github.run_number }}
+          overwrite: true
+          body: "iOS Release Build #${{ github.run_number }} - Permissions Fixed"
