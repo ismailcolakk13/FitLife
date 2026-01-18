@@ -76,7 +76,20 @@ jobs:
           pod install
         shell: bash
 
-      - run: flutter build ios --release --no-codesign
+      - name: Inject Entitlements into Project
+        run: |
+          # Proje dosyasının yolu
+          PBXPROJ="ios/Runner.xcodeproj/project.pbxproj"
+          
+          # Eğer CODE_SIGN_ENTITLEMENTS ayarı yoksa, Release ayarlarına ekle
+          # Bu komut 'PRODUCT_BUNDLE_IDENTIFIER' satırını bulur ve altına Entitlements ayarını ekler.
+          sed -i '' '/PRODUCT_BUNDLE_IDENTIFIER/a\
+          CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;' $PBXPROJ
+          
+          echo "✅ Runner.entitlements proje ayarlarına enjekte edildi."
+        shell: bash  
+
+      - run: flutter build ios --debug --no-codesign
 
       - run: mkdir Payload
         working-directory: build/ios/iphoneos
@@ -95,4 +108,4 @@ jobs:
           file: build/ios/iphoneos/FlutterIpaExport.ipa
           tag: v1.0.${{ github.run_number }}
           overwrite: true
-          body: "iOS Build Release #${{ github.run_number }}"
+          body: "iOS Build Debug #${{ github.run_number }}"

@@ -36,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
   double _sleepHours = -1; // Varsayılan
   final Health health = Health();
 
-  int _stepBurnedCalories=0;
+  int _stepBurnedCalories = 0;
 
   // Streak Verisi
   int _streakCount = 0;
@@ -46,7 +46,6 @@ class _HomeScreenState extends State<HomeScreen> {
   int _todaysCalorie = -1;
   int _todaysWater = -1;
   List<double> _weeklyCalories = List.filled(7, 0.0);
-
 
   int _lastActivityDurationMinutes = 45;
   String _lastActivityName = "koşu";
@@ -350,21 +349,20 @@ class _HomeScreenState extends State<HomeScreen> {
   // --- 3. ADIM VE KALORİ VERİLERİ ---
   Future<void> _requestPermissionsAndFetchData() async {
     debugPrint("🔍 [DEBUG] Adım izni isteme süreci başlatılıyor...");
-    
+
     try {
       final types = [HealthDataType.STEPS];
-      final permissions = [HealthDataAccess.READ];
+      // final permissions = [HealthDataAccess.READ];
 
       // İzin istemeden önce kontrol
-      bool requested = await health.requestAuthorization(
-        types,
-        permissions: permissions,
-      );
-      
+      bool requested = await health.requestAuthorization(types);
+
       debugPrint("🔍 [DEBUG] İzin penceresi sonucu: $requested");
 
       if (requested) {
-        debugPrint("✅ [DEBUG] İzin verildi veya zaten var. Veri çekmeye gidiliyor...");
+        debugPrint(
+          "✅ [DEBUG] İzin verildi veya zaten var. Veri çekmeye gidiliyor...",
+        );
         await _fetchHealthData();
       } else {
         debugPrint("⚠️ [DEBUG] Kullanıcı izni reddetti veya izin alınamadı.");
@@ -374,7 +372,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
- Future<void> _fetchHealthData() async {
+  Future<void> _fetchHealthData() async {
     debugPrint("👣 [DEBUG] _fetchHealthData fonksiyonuna girildi.");
 
     // if (widget.isOffline) {
@@ -385,7 +383,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final now = DateTime.now();
       final startOfDay = DateTime(now.year, now.month, now.day);
-      
+
       debugPrint("⏳ [DEBUG] Sorgu Zaman Aralığı: $startOfDay  --->  $now");
 
       // DÜZELTME: Sadece Adımları çekiyoruz
@@ -395,10 +393,14 @@ class _HomeScreenState extends State<HomeScreen> {
         types: [HealthDataType.STEPS],
       );
 
-      debugPrint("📦 [DEBUG] Health API'den dönen veri parçası sayısı: ${stepsData.length}");
+      debugPrint(
+        "📦 [DEBUG] Health API'den dönen veri parçası sayısı: ${stepsData.length}",
+      );
 
       if (stepsData.isEmpty) {
-        debugPrint("⚠️ [DEBUG] Veri listesi BOŞ döndü. (Google Fit/HealthKit'te bugün için veri olmayabilir)");
+        debugPrint(
+          "⚠️ [DEBUG] Veri listesi BOŞ döndü. (Google Fit/HealthKit'te bugün için veri olmayabilir)",
+        );
       }
 
       // Adımları topla
@@ -406,14 +408,14 @@ class _HomeScreenState extends State<HomeScreen> {
       for (var data in stepsData) {
         // Her bir veri parçasını gör (Çok fazla veri varsa burayı yorum satırı yapın)
         // debugPrint("   -> Parça: ${data.value} | Kaynak: ${data.sourceId} | Tarih: ${data.dateFrom}");
-        
+
         if (data.value is NumericHealthValue) {
           int val = (data.value as NumericHealthValue).numericValue.toInt();
           totalSteps += val;
         }
       }
 
-      int calculatedCalories = (totalSteps*0.045).toInt();
+      int calculatedCalories = (totalSteps * 0.045).toInt();
 
       debugPrint("∑ [DEBUG] Hesaplanan TOPLAM ADIM: $totalSteps");
 
@@ -421,9 +423,8 @@ class _HomeScreenState extends State<HomeScreen> {
         _stepCount = totalSteps;
         _stepBurnedCalories = calculatedCalories;
       });
-      
-      debugPrint("✅ [DEBUG] UI güncellendi (_stepCount: $_stepCount)");
 
+      debugPrint("✅ [DEBUG] UI güncellendi (_stepCount: $_stepCount)");
     } catch (e) {
       debugPrint('❌ [DEBUG] Veri çekme hatası (Catch bloğu): $e');
     }
@@ -473,7 +474,6 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint("Su verisi çekme hatası: $e");
     }
   }
-
 
   // --- 4. DİYALOGLAR (POP-UP) ---
 
@@ -671,7 +671,8 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 _statCard(
                   title: 'Kalori',
-                  value: "${(_todaysCalorie != -1 ? _todaysCalorie : 0) + _stepBurnedCalories} kcal",
+                  value:
+                      "${(_todaysCalorie != -1 ? _todaysCalorie : 0) + _stepBurnedCalories} kcal",
                   icon: Icons.local_fire_department,
                   color: Colors.orange,
                 ),
