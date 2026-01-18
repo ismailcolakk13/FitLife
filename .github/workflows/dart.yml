@@ -1,34 +1,76 @@
 name: iOS-ipa-build
 
+# 1. TETİKLEYİCİLER
 on:
+  # Ana dala (main) kod yüklendiğinde otomatik çalış
+  push:
+    branches: [ "main" ]
+  # GitHub sitesinden butona basarak çalıştırma
   workflow_dispatch:
 
 jobs:
   build-ios:
-    name: 🎉 iOS Build
+    name: 🎉 iOS Build (Release)
     runs-on: macos-latest
     steps:
+      # Kodu Çek
       - uses: actions/checkout@v3
 
+      # Flutter Kurulumu
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           architecture: x64
+      
       - run: flutter pub get
 
+      # .env Dosyasını Oluştur
       - name: Create .env file
         run: |
           echo "${{ secrets.ENV_FILE_BASE64 }}" | base64 --decode > .env
 
+      # ---------------------------------------------------------
+      # ADIM A: Info.plist Dosyasına İzinleri Zorla Ekleme
+      # Bu adım çökme sorununun (Crash Log) KESİN çözümüdür.
+      # ---------------------------------------------------------
+      - name: Inject Permissions into Info.plist
+        run: |
+          PLIST="ios/Runner/Info.plist"
+          
+          # Yardımcı fonksiyon: Eğer anahtar yoksa ekler, varsa günceller
+          add_key() {
+            /usr/libexec/PlistBuddy -c "Delete :$1" $PLIST 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :$1 string '$2'" $PLIST
+          }
+
+          echo "🔧 İzinler Info.plist dosyasına işleniyor..."
+
+          # Kamera İzni (Çökme Sebebi buydu)
+          add_key "NSCameraUsageDescription" "Yemek fotoğrafı çekmek için kamera izni gerekiyor."
+          
+          # Galeri ve Mikrofon İzni
+          add_key "NSPhotoLibraryUsageDescription" "Fotoğraf seçmek için galeri izni gerekiyor."
+          add_key "NSMicrophoneUsageDescription" "Video için mikrofon izni gerekiyor."
+
+          # SAĞLIK İZİNLERİ (Adım Sayar İçin Kritik)
+          add_key "NSHealthShareUsageDescription" "Adım sayınızı takip etmek için sağlık verilerine erişim gerekiyor."
+          add_key "NSHealthUpdateUsageDescription" "Verileri sağlık uygulamasıyla senkronize etmek için izin gerekiyor."
+
+          echo "✅ İzinler eklendi."
+        shell: bash
+
+      # ---------------------------------------------------------
+      # ADIM B: Podfile ve İzin Makroları (PERMISSION_HEALTH=1)
+      # ---------------------------------------------------------
       - name: Re-create Podfile & Update Settings
         run: |
-          # 1. Xcode proje ayarını 14.0 yap
+          # 1. Xcode proje ayarını 14.0 yap (Health paketi için şart)
           sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9\.]*/IPHONEOS_DEPLOYMENT_TARGET = 14.0/g' ios/Runner.xcodeproj/project.pbxproj
           
           # 2. Eski Podfile'ı sil
           rm -f ios/Podfile ios/Podfile.lock
 
-          # 3. Yeni ve Temiz Podfile Oluştur (iOS 14.0)
+          # 3. Yeni Podfile Oluştur (Permission Makroları ile)
           cat <<EOF > ios/Podfile
           platform :ios, '14.0'
           ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -42,80 +84,7 @@ jobs:
           def flutter_root
             generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
             unless File.exist?(generated_xcode_build_settings_path)
-              raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first."
+              raise "#{generated_xcode_build_settings_path} must exist."
             end
             File.foreach(generated_xcode_build_settings_path) do |line|
-              matches = line.match(/FLUTTER_ROOT\=(.*)/)
-              return matches[1] if matches
-            end
-            raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting Generated.xcconfig and running flutter pub get."
-          end
-
-          require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
-
-          target 'Runner' do
-            use_frameworks!
-            use_modular_headers!
-
-            flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-          end
-
-          post_install do |installer|
-            installer.pods_project.targets.each do |target|
-              flutter_additional_ios_build_settings(target)
-              target.build_configurations.each do |config|
-                 config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
-                 config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
-                  '$(inherited)',
-                  
-                  # Health (Sağlık) İzni - Bunu 1 yapmazsan çöker!
-                  'PERMISSION_HEALTH=1',
-                  
-                  # Diğerleri (Lazımsa)
-                  'PERMISSION_CAMERA=1',
-                  'PERMISSION_PHOTOS=1',
-                ]
-              end
-            end
-          end
-          EOF
-
-          # 4. Kurulumu Yap
-          cd ios
-          pod repo update
-          pod install
-        shell: bash
-
-      - name: Inject Entitlements into Project
-        run: |
-          # Proje dosyasının yolu
-          PBXPROJ="ios/Runner.xcodeproj/project.pbxproj"
-          
-          # Eğer CODE_SIGN_ENTITLEMENTS ayarı yoksa, Release ayarlarına ekle
-          # Bu komut 'PRODUCT_BUNDLE_IDENTIFIER' satırını bulur ve altına Entitlements ayarını ekler.
-          sed -i '' '/PRODUCT_BUNDLE_IDENTIFIER/a\
-          CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;' $PBXPROJ
-          
-          echo "✅ Runner.entitlements proje ayarlarına enjekte edildi."
-        shell: bash  
-
-      - run: flutter build ios --release --no-codesign
-
-      - run: mkdir Payload
-        working-directory: build/ios/iphoneos
-
-      - run: mv Runner.app/ Payload
-        working-directory: build/ios/iphoneos
-
-      - name: Zip output
-        run: zip -qq -r -9 FlutterIpaExport.ipa Payload
-        working-directory: build/ios/iphoneos
-
-      - name: Upload binaries to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: build/ios/iphoneos/FlutterIpaExport.ipa
-          tag: v1.0.${{ github.run_number }}
-          overwrite: true
-          body: "iOS Build Release #${{ github.run_number }}"
+              matches = line.match(/
